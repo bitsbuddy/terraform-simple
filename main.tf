@@ -70,7 +70,7 @@ resource "aws_instance" "my_instance" {
 # Create an S3 Bucket
 resource "aws_s3_bucket" "test1" {
   bucket = "test1"
-  acl    = "private"
+  aws_s3_bucket_acl    = "private"
 }
 
 # Outputs
