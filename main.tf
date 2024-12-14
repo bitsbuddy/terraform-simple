@@ -1,5 +1,3 @@
-gdshgdshgjv%^%^68666
-
 # Specify the provider
 provider "aws" {
   region = "us-east-1"  # Replace with your preferred AWS region
