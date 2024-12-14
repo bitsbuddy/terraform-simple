@@ -1,30 +1,73 @@
-module "aws_reverse_proxy" {
-  # Available inputs: https://github.com/futurice/terraform-utils/tree/master/aws_reverse_proxy#inputs
-  # Check for updates: https://github.com/futurice/terraform-utils/compare/v11.0...master
-  source = "git::ssh://git@github.com/futurice/terraform-utils.git//aws_reverse_proxy?ref=v11.0"
+# Specify the provider
+provider "aws" {
+  region = "us-east-1"  # Replace with your preferred AWS region
+}
 
-  # S3 website endpoints are only available over plain HTTP
-  origin_url = "http://${local.bucket_domain_name}/"
+# Create a VPC
+resource "aws_vpc" "my_vpc" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+  tags = {
+    Name = "my-vpc"
+  }
+}
 
-  # Our S3 bucket will only allow requests containing this custom header
-  origin_custom_header_name = "User-Agent"
+# Create a Subnet
+resource "aws_subnet" "my_subnet" {
+  vpc_id            = aws_vpc.my_vpc.id
+  cidr_block        = "10.0.1.0/24"
+  map_public_ip_on_launch = true
+  availability_zone = "us-east-1a"  # Replace with your preferred availability zone
+  tags = {
+    Name = "my-subnet"
+  }
+}
 
-  # Somewhat perplexingly, this is the "correct" way to ensure users can't bypass CloudFront on their way to S3 resources
-  # https://abridge2devnull.com/posts/2018/01/restricting-access-to-a-cloudfront-s3-website-origin/
-  origin_custom_header_value = "${random_string.s3_read_password.result}"
+# Create an Internet Gateway
+resource "aws_internet_gateway" "my_igw" {
+  vpc_id = aws_vpc.my_vpc.id
+  tags = {
+    Name = "my-internet-gateway"
+  }
+}
 
-  site_domain            = "${var.site_domain}"
-  name_prefix            = "${var.name_prefix}"
-  comment_prefix         = "${var.comment_prefix}"
-  cloudfront_price_class = "${var.cloudfront_price_class}"
-  viewer_https_only      = "${var.viewer_https_only}"
-  cache_ttl_override     = "${var.cache_ttl_override}"
-  default_root_object    = "${var.default_root_object}"
-  add_response_headers   = "${var.add_response_headers}"
-  basic_auth_username    = "${var.basic_auth_username}"
-  basic_auth_password    = "${var.basic_auth_password}"
-  basic_auth_realm       = "${var.basic_auth_realm}"
-  basic_auth_body        = "${var.basic_auth_body}"
-  lambda_logging_enabled = "${var.lambda_logging_enabled}"
-  tags                   = "${var.tags}"
+# Create a Route Table and Associate it with the Subnet
+resource "aws_route_table" "my_route_table" {
+  vpc_id = aws_vpc.my_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.my_igw.id
+  }
+
+  tags = {
+    Name = "my-route-table"
+  }
+}
+
+resource "aws_route_table_association" "my_route_table_assoc" {
+  subnet_id      = aws_subnet.my_subnet.id
+  route_table_id = aws_route_table.my_route_table.id
+}
+
+# Launch an EC2 Instance
+resource "aws_instance" "my_instance" {
+  ami           = "ami-0c02fb55956c7d316"  # Replace with an appropriate AMI ID for your region
+  instance_type = "t2.micro"
+
+  subnet_id              = aws_subnet.my_subnet.id
+  associate_public_ip_address = true
+
+  tags = {
+    Name = "my-instance"
+  }
+
+  # Optional: Key Pair for SSH access
+  key_name = "my-key-pair"  # Replace with your existing key pair name
+}
+
+# Outputs
+output "instance_public_ip" {
+  value = aws_instance.my_instance.public_ip
 }
