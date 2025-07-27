@@ -1,3 +1,4 @@
+
 # Specify the provider
 provider "aws" {
   region = "us-east-1"  # Replace with your preferred AWS region
@@ -65,6 +66,15 @@ resource "aws_instance" "my_instance" {
 
   # Optional: Key Pair for SSH access
   key_name = "my-key-pair"  # Replace with your existing key pair name
+}
+
+# Create an S3 Bucket
+resource "aws_s3_bucket" "test22" {
+  bucket = "test22"
+  acl    = "private"
+  tags = {
+    Name = "test22"
+  }
 }
 
 # Outputs
